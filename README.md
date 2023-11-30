@@ -6,7 +6,7 @@ Implement lambda functions for...
 - [ ] Venue Manager:
     - [ ] /listBlocks: list the blocks for a show
     - [ ] /createBlock: create a block for a show
-    - [ ] /deleteBlock: delete a block for a show
+    - [x] /deleteBlock: delete a block for a show
     - [ ] /activateShow: activate a show with a valid configuration
     - [ ] /deleteShow: deletes a show if it's inactive
     - [ ] /getShowReport: generate a report for a single show
