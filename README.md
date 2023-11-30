@@ -18,4 +18,5 @@ Implement lambda functions for...
 - [ ]  Administrator:
     - [ ] /getShowsReport: generate a report for all the shows in a venue
     - [ ] /deleteShow: deletes a show regardless if it's inactive (same API the one in venue manager, but different functionality)
+
 There will also probably be some more lambda functions that'll come up as we work on these
