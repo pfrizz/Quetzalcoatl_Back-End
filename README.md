@@ -1,8 +1,8 @@
 # Quetzalcoatl_Back-End
 Backup of lambda functions from AWS\
-Updated API docs can be found [here](https://docs.google.com/document/d/18y67d3V0MjWw2tiGwqK-8LkG6fQ78yyeiyaRdMhW8jU/edit#heading=h.y03xr5ipv4l1)\
+Updated API docs can be found [here](https://docs.google.com/document/d/18y67d3V0MjWw2tiGwqK-8LkG6fQ78yyeiyaRdMhW8jU/edit#heading=h.y03xr5ipv4l1)
 # TODO:
-Implement lambda functions for...\
+Implement lambda functions for...
 - [ ] Venue Manager:
     - [ ] /listBlocks: list the blocks for a show
     - [ ] /createBlock: create a block for a show
