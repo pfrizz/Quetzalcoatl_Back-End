@@ -15,7 +15,7 @@ Implement lambda functions for...
     - [ ] /getShowReport: generate a report for a single show
 - [ ] ⭐ Consumer:
     - [x] ⭐ /searchShows: returns a lists of active shows based on a search query
-    - [ ] ⭐ /listAvailableSeats: lists all available seats for a show
+    - [x] ⭐ /listAvailableSeats: lists all available seats for a show
     - [ ] ⭐ /purchaseSeats: purchases the seats a consumer has selected if they are all available
 - [x] ⭐ Administrator:
     - [x] ⭐ /getShowsReport: generate a report for all the shows in a venue
