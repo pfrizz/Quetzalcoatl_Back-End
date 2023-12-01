@@ -1,6 +1,6 @@
-const mysql = require('mysql');
+const mysql = require('/opt/nodejs/node_modules/mysql');
 const db_access = require('/opt/nodejs/db_access')
-const { v4: uuidv4 } = require('uuid');
+const { v4: uuidv4 } = require('/opt/nodejs/node_modules/uuid');
 
 exports.handler = async (event) => {
     // get credentials from the db_access layer (loaded separately via AWS console)
