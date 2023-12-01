@@ -10,7 +10,7 @@ Implement lambda functions for...
     - [ ] /createBlock: create a block for a show
     - [x] /deleteBlock: delete a block for a show
     - [ ] ⭐ /activateShow: activate a show with a valid configuration
-    - [ ] ⭐ /deleteShow: deletes a show if it's inactive
+    - [x] ⭐ /deleteShow: deletes a show if it's inactive
     - [ ] /getShowReport: generate a report for a single show
 - [ ]  ⭐ Consumer:
     - [x] ⭐ /searchShows: returns a lists of shows based on a search query
@@ -19,6 +19,6 @@ Implement lambda functions for...
     - [ ] ⭐ /purchaseSeats: purchases the seats a consumer has selected if they are all available
 - [ ]  Administrator:
     - [ ] ⭐ /getShowsReport: generate a report for all the shows in a venue
-    - [ ] ⭐ /deleteShow: deletes a show regardless if it's inactive (same API the one in venue manager, but different functionality)
+    - [x] ⭐ /deleteShow: deletes a show regardless if it's inactive (same API call as the one in venue manager, but different functionality)
 
 There will also probably be some more lambda functions that'll come up as we work on these
