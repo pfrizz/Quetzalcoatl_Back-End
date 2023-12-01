@@ -9,7 +9,7 @@ Implement lambda functions for...
     - [ ] /listBlocks: list the blocks for a show
     - [ ] /createBlock: create a block for a show
     - [x] /deleteBlock: delete a block for a show
-    - [ ] ⭐ /activateShow: activate a show with a valid configuration
+    - [x] ⭐ /activateShow: activate a show with a valid configuration
     - [x] ⭐ /deleteShow: deletes a show if it's inactive
     - [ ] /getShowReport: generate a report for a single show
 - [ ] ⭐ Consumer:
