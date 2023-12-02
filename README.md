@@ -7,7 +7,7 @@ API calls needed for the next iteration have a ⭐
 Implement lambda functions for...
 - [ ] Venue Manager:
     - [ ] /listBlocks: list the blocks for a show
-    - [ ] /createBlock: create a block for a show
+    - [x] /createBlock: create a block for a show
     - [x] /deleteBlock: delete a block for a show
     - [x] ⭐ /activateShow: activate a show with a valid configuration
     - [ ] /deactivateShow
