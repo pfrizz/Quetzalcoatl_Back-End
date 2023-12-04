@@ -12,7 +12,7 @@ Implement lambda functions for...
     - [x] ⭐ /activateShow: activate a show with a valid configuration
     - [x] /deactivateShow
     - [x] ⭐ /deleteShow: deletes a show if it's inactive
-    - [ ] /getShowReport: generate a report for a single show
+    - [x] /getShowReport: generate a report for a single show
 - [ ] ⭐ Consumer:
     - [x] ⭐ /searchShows: returns a lists of active shows based on a search query
     - [x] ⭐ /listAvailableSeats: lists all available seats for a show
