@@ -1,6 +1,6 @@
 const mysql = require('/opt/nodejs/node_modules/mysql');
 const db_access = require('/opt/nodejs/db_access')
-const { v4: uuidv4 } = require('/opt/nodejs/node_modules/uuid');
+
 
 exports.handler = async (event) => {
     // get credentials from the db_access layer (loaded separately via AWS console)
@@ -32,10 +32,10 @@ exports.handler = async (event) => {
         });
     }
 
-    let isShowInactive = (showName) => {
+    let isShowInactive = (showID) => {
         return new Promise((resolve, reject) => {
             // delete from database
-            pool.query("SELECT * FROM seats4u.Shows WHERE showName=? AND isShowActive=0", [showName], (error, rows) => {
+            pool.query("SELECT * FROM seats4u.Shows WHERE showID=? AND isShowActive=0", [showID], (error, rows) => {
                 if (error) { return reject(error); }
                 let showInactive = rows.length > 0;
                 return resolve(showInactive)
@@ -43,9 +43,9 @@ exports.handler = async (event) => {
         });
     }
     
-    let doesShowExist = (showName) => {
+    let doesShowExist = (showID) => {
         return new Promise((resolve, reject) => {
-            pool.query("SELECT * FROM seats4u.Shows WHERE showName=?", [showName], (error, rows) => {
+            pool.query("SELECT * FROM seats4u.Shows WHERE showID=?", [showID], (error, rows) => {
                 if (error) { return reject(error); }
                 let showExists = rows.length > 0;
                 return resolve(showExists)
@@ -53,10 +53,10 @@ exports.handler = async (event) => {
         });
     }
 
-    let deleteShowfromDatabase = (showName) => {
+    let deleteShowfromDatabase = (showID) => {
         return new Promise((resolve, reject) => {
             // delete from database
-            pool.query("DELETE FROM seats4u.Shows WHERE showName=?", [showName], (error, rows) => {
+            pool.query("DELETE FROM seats4u.Shows WHERE showID=?", [showID], (error, rows) => {
                 if (error) { return reject(error); }
                 return resolve()
             });
@@ -67,52 +67,25 @@ exports.handler = async (event) => {
     try {
         let authorizedAsAdministrator = await isAuthorizedAsAdministrator(event.userID)
         if(authorizedAsAdministrator){
-            let showExists = await doesShowExist(event.showName);
-            if(showExists){
-                let deleteShow = await deleteShowfromDatabase(event.showName);
-            
-                response = {
-                    statusCode: 200
-                }
-            }
-            else{
-                response = {
-                    statusCode: 400,
-                    error: "Show not found"
-                }
+            if(!await doesShowExist(event.showID)) {throw("Show with id '" + event.showID + "' not found")}
+
+            await deleteShowfromDatabase(event.showID);
+        
+            response = {
+                statusCode: 200
             }
         }
         else{
-            let authorizedAsVenueManager = await isAuthorizedAsVenueManager(event.userID)
-            if(authorizedAsVenueManager){
-                let showExists = await doesShowExist(event.showName);
-                if(showExists){
-                    let showInactive = await isShowInactive(event.showName)
-                    if(!showInactive) {
-                        let deleteShow = await deleteShowfromDatabase(event.showName)
-                    
-                        response = {
-                            statusCode: 200
-                        }
-                    }
-                    else{
-                        response = {
-                            statusCode: 400,
-                            error: "Venue manager cannot delete an active show"
-                        }
-                    }
-                }
-                else {
-                    response = {
-                        statusCode: 400,
-                        error: "Show not found"
-                    }
-                }
-            }
+            if(!await isAuthorizedAsVenueManager(event.userID)){ throw ("User is not authorized to perform this action") }
+            if(!await doesShowExist(event.showID)) {throw("Show with id '" + event.showID + "' not found")}
+            if(!await isShowInactive(event.showID)) { throw ("Venue manager cannot delete an active show") }
+            
+            await deleteShowfromDatabase(event.showID)
+        
             response = {
-                statusCode: 400,
-                error: "User is not authorized to perform this action"
+                statusCode: 200
             }
+            
         }
     } catch (err) {
         response = {

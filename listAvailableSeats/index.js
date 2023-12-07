@@ -10,19 +10,61 @@ exports.handler = async (event) => {
         database: db_access.config.database
     });
     
-    let isAuthorizedAsVenueManager = (userID) => {
+    let doesShowExist = (showID) => {
         return new Promise((resolve, reject) => {
-            pool.query("SELECT * FROM seats4u.Venues WHERE venueID=?", [userID], (error, rows) => {
+            pool.query("SELECT * FROM seats4u.Shows WHERE showID=?", [showID], (error, rows) => {
                 if (error) { return reject(error); }
-                let isAuthorized = rows.length > 0;
-                return resolve(isAuthorized)
+                let doesExist = rows.length > 0;
+                return resolve(doesExist)
             });
         });
     }
 
-    let getAvailableSeats = (showName, orderBy) => {
+    let getAvailableSeatsBySeatRow = (showID) => {
         return new Promise((resolve, reject) => {
-            pool.query("CALL `seats4u`.`getAvailableSeats`(?, ?)", [showName, orderBy], (error, rows) => {
+            pool.query("CALL `seats4u`.`getAvailableSeatsBySeatRow`(?)", [showID], (error, rows) => {
+                if (error) { return reject(error); }
+                if(rows[0].length > 0){
+                    return resolve(rows[0])
+                }
+                else{
+                    return reject("No available seats found")
+                }
+            });
+        });
+    }
+    
+    let getAvailableSeatsBySeatColumn = (showID) => {
+        return new Promise((resolve, reject) => {
+            pool.query("CALL `seats4u`.`getAvailableSeatsBySeatColumn`(?)", [showID], (error, rows) => {
+                if (error) { return reject(error); }
+                if(rows[0].length > 0){
+                    return resolve(rows[0])
+                }
+                else{
+                    return reject("No available seats found")
+                }
+            });
+        });
+    }
+    
+    let getAvailableSeatsByPrice = (showID) => {
+        return new Promise((resolve, reject) => {
+            pool.query("CALL `seats4u`.`getAvailableSeatsByPrice`(?)", [showID], (error, rows) => {
+                if (error) { return reject(error); }
+                if(rows[0].length > 0){
+                    return resolve(rows[0])
+                }
+                else{
+                    return reject("No available seats found")
+                }
+            });
+        });
+    }
+    
+    let getAvailableSeatsBySectionType = (showID) => {
+        return new Promise((resolve, reject) => {
+            pool.query("CALL `seats4u`.`getAvailableSeatsBySectionType`(?)", [showID], (error, rows) => {
                 if (error) { return reject(error); }
                 if(rows[0].length > 0){
                     return resolve(rows[0])
@@ -36,11 +78,25 @@ exports.handler = async (event) => {
     
     let response = undefined
     try {
-        let isAuthorized = await isAuthorizedAsVenueManager(event.userID)
+        if(event.showID == null) {throw("Key 'showID' is required")}
+        if(!await doesShowExist(event.showID)) {throw("Show with id '" + event.showID + "' does not exist")}
         
-        if(!isAuthorized) {throw ("User is not authorized as a venue manager")}
-        
-        let availableSeats = await getAvailableSeats(event.showName, event.orderBy)
+        let availableSeats = null;
+        if(event.orderBy === "seatRow"){
+            availableSeats = await getAvailableSeatsBySeatRow(event.showID)
+        }
+        else if(event.orderBy === "seatColumn"){
+            availableSeats = await getAvailableSeatsBySeatColumn(event.showID)
+        }
+        else if(event.orderBy === "price"){
+            availableSeats = await getAvailableSeatsByPrice(event.showID)
+        }
+        else if(event.orderBy === "sectionType"){
+            availableSeats = await getAvailableSeatsBySectionType(event.showID)
+        }
+        else{
+            throw ("Invalid sorting criteria, must be one of 'seatRow', 'seatColumn', 'price', or 'sectionType'")
+        }
         
         response = {
             statusCode: 200,

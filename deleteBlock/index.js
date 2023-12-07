@@ -11,7 +11,7 @@ exports.handler = async (event) => {
         database: db_access.config.database
     });
     
-    let isAuthorizedAsVenueManager = (userID) => {
+      let isAuthorizedAsVenueManager = (userID) => {
         return new Promise((resolve, reject) => {
             pool.query("SELECT * FROM seats4u.Venues WHERE venueID=?", [userID], (error, rows) => {
                 if (error) { return reject(error); }
@@ -20,40 +20,34 @@ exports.handler = async (event) => {
             });
         });
     }
-
-    let getShowsFromDatabase = (venueID) => {
+    
+        let deleteBlockfromDatabase = (blockID) => {
         return new Promise((resolve, reject) => {
-            pool.query("SELECT showName, isShowActive, showID, showDatetime FROM seats4u.Shows WHERE venueID=?", [venueID], (error, rows) => {
+            // delete from database
+            pool.query("DELETE FROM seats4u.Blocks WHERE blockID=?", [blockID], (error, rows) => {
                 if (error) { return reject(error); }
-                if(rows.length > 0){
-                    return resolve(rows)
-                }
-                else{
-                    return resolve([])
-                }
+                //on success return the venue ID
+                return resolve(blockID)
             });
         });
     }
     
-    let response = undefined
+      let response = undefined
     try {
         let isAuthorized = await isAuthorizedAsVenueManager(event.userID)
-        
-        if(isAuthorized) {
-            let shows = await getShowsFromDatabase(event.userID)
-
+        if(isAuthorized){
+            let blockID = await deleteBlockfromDatabase(event.blockID)
+            
             response = {
-                statusCode: 200,
-                shows
+                statusCode: 200
             }
         }
         else{
             response = {
                 statusCode: 400,
-                error: "Venue ID not recognized"
+                error: "User is not authorized as venue manager"
             }
         }
-        
     } catch (err) {
         response = {
             statusCode: 400,

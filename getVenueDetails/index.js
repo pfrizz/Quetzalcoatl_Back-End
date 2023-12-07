@@ -56,7 +56,7 @@ exports.handler = async (event) => {
         else{
             response = {
                 statusCode: 400,
-                error: "User is not authorized as venue manager"
+                error: "Venue ID not found"
             }
         }
         

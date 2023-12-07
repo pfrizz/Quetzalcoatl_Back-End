@@ -11,6 +11,7 @@ exports.handler = async (event) => {
         database: db_access.config.database
     });
     
+    
     let isAuthorizedAsVenueManager = (userID) => {
         return new Promise((resolve, reject) => {
             pool.query("SELECT * FROM seats4u.Venues WHERE venueID=?", [userID], (error, rows) => {
@@ -35,13 +36,13 @@ exports.handler = async (event) => {
     }
 
     
-    let addBlockToDatabase = (showName, venueID, sectionType, price, startingRow, endingRow) => {
+    let addBlockToDatabase = (showID, venueID, sectionType, price, startingRow, endingRow) => {
         return new Promise((resolve, reject) => {
             // generate new uuid for the block
             let blockID = uuidv4();
 
             // call stored procedure to add block to database
-            pool.query("CALL addBlockToDatabase(?, ?, ?, ?, ?, ?, ?)", [showName, venueID, sectionType, blockID, price, startingRow, endingRow], (error, rows) => {
+            pool.query("CALL addBlockToDatabase(?, ?, ?, ?, ?, ?, ?)", [showID, venueID, sectionType, blockID, price, startingRow, endingRow], (error, rows) => {
                 if (error) { return reject(error); }
                 return resolve(blockID)
             });
@@ -73,43 +74,50 @@ exports.handler = async (event) => {
     let response = undefined
     try {
         let isAuthorized = await isAuthorizedAsVenueManager(event.userID)
-        if(isAuthorized){
-            // generate the showID and add it to the database
-            let showID = await addShowToDatabase(event.userID, event.showName, false, event.showDatetime)
+        
+        if(!isAuthorized) { throw ("User is not authorized as venue manager") }
+        
+        //check that blocks are valid
+        for (let i = 0; i < event.blocks.length; i++) {
+            if(event.blocks[i].endingRow.charCodeAt(0) < event.blocks[i].startingRow.charCodeAt(0)){
+                throw ("Ending row is before starting row")
+            }
+        }
+        
+        // generate the showID and add it to the database
+        let showID = await addShowToDatabase(event.userID, event.showName, false, event.showDatetime)
+        
+        // add all of the show's blocks to the database
+        for (let i = 0; i < event.blocks.length; i++) {
+            let blockID = await addBlockToDatabase(showID, 
+                                                    event.userID, 
+                                                    event.blocks[i].sectionType, 
+                                                    event.blocks[i].price, 
+                                                    event.blocks[i].startingRow, 
+                                                    event.blocks[i].endingRow);
+                                                    
+            // add all of the block's seats to the database
+            let numberOfRows = event.blocks[i].endingRow.charCodeAt(0) - event.blocks[i].startingRow.charCodeAt(0) + 1;
+           // console.log(i + "rows: " + numberOfRows)
+            let numberOfColumns = await getNumberOfBlockColumns(blockID);
+           // console.log(i + "cols: " + numberOfColumns)
             
-            // add all of the show's blocks to the database
-            for (let i = 0; i < event.blocks.length; i++) {
-                let blockID = await addBlockToDatabase(event.showName, 
-                                                        event.userID, 
-                                                        event.blocks[i].sectionType, 
-                                                        event.blocks[i].price, 
-                                                        event.blocks[i].startingRow, 
-                                                        event.blocks[i].endingRow);
-                                                        
-                // add all of the block's seats to the database
-                let numberOfRows = event.blocks[i].endingRow.charCodeAt(0) - event.blocks[i].startingRow.charCodeAt(0) + 1;
-                let numberOfColumns = await getNumberOfBlockColumns(blockID);
-                
-                for (let j = 0; j < numberOfRows; j++){
-                    for(let k = 0; k < numberOfColumns; k++){
-                        let seatRow = String.fromCharCode(event.blocks[i].startingRow.charCodeAt(0) + j);
-                        // seat columns are 1-indexed
-                        let seatColumn = k + 1;
-                        let seatID = await addSeatToDatabase(blockID, seatRow, seatColumn);
-                    }
+            for (let j = 0; j < numberOfRows; j++){
+                for(let k = 0; k < numberOfColumns; k++){
+                    let seatRow = String.fromCharCode(event.blocks[i].startingRow.charCodeAt(0) + j);
+                    // seat columns are 1-indexed
+                    let seatColumn = k + 1;
+                    let seatID = await addSeatToDatabase(blockID, seatRow, seatColumn);
+                   // console.log("added seat" + (j*k + k) + ": " + seatID)
                 }
             }
-    
-            response = {
-                statusCode: 200,
-            }
         }
-        else{
-            response = {
-                statusCode: 400,
-                error: "User is not authorized as venue manager"
-            }
+
+        response = {
+            statusCode: 200,
+            showID
         }
+        
     } catch (err) {
         response = {
             statusCode: 400,

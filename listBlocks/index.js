@@ -3,6 +3,7 @@ const db_access = require('/opt/nodejs/db_access')
 const { v4: uuidv4 } = require('/opt/nodejs/node_modules/uuid');
 
 exports.handler = async (event) => {
+    console.log("SDDSD")
     // get credentials from the db_access layer (loaded separately via AWS console)
     var pool = mysql.createPool({
         host: db_access.config.host,
@@ -10,16 +11,6 @@ exports.handler = async (event) => {
         password: db_access.config.password,
         database: db_access.config.database
     });
-    
-    let isAuthorizedAsAdministrator = (userID) => {
-        return new Promise((resolve, reject) => {
-            pool.query("SELECT * FROM seats4u.Administrators WHERE administratorID=?", [userID], (error, rows) => {
-                if (error) { return reject(error); }
-                let isAuthorized = rows.length > 0;
-                return resolve(isAuthorized)
-            });
-        });
-    }
     
     let isAuthorizedAsVenueManager = (userID) => {
         return new Promise((resolve, reject) => {
@@ -31,49 +22,51 @@ exports.handler = async (event) => {
         });
     }
     
-    let doesVenueExist = (venueID) => {
+    let getShownameFromDatabase = (showName) => {
         return new Promise((resolve, reject) => {
-            pool.query("SELECT * FROM seats4u.Venues WHERE venueID=?", [venueID], (error, rows) => {
+            pool.query("SELECT showID FROM seats4u.Shows where showName=?",[showName], (error, rows) => {
                 if (error) { return reject(error); }
-                let venueExists = rows.length > 0;
-                return resolve(venueExists)
+                console.log(rows[0])
+                let showID = rows[0];
+
+                return resolve(rows[0].showID)
+                
             });
         });
     }
-    
 
-    let getShowsReport = (venueID) => {
+console.log("SDS")
+    let getBlocksFromDatabase = (showID) => {
         return new Promise((resolve, reject) => {
-            pool.query("CALL `seats4u`.`generateShowsReport`(?)", [venueID], (error, rows) => {
+            pool.query("SELECT price, startingRow, endingRow FROM seats4u.Blocks where showID=?",[showID], (error, rows) => {
                 if (error) { return reject(error); }
                 if(rows.length > 0){
-                  return resolve(rows[0])
+                    return resolve(rows)
                 }
                 else{
-                  return resolve([])
+                    return resolve([])
                 }
             });
         });
     }
-    
     
     let response = undefined
     try {
-        let hasAdministratorAuthentication = await isAuthorizedAsAdministrator(event.userID)
-        let hasVenueManagerAuthorization = await isAuthorizedAsVenueManager(event.userID)
+        let isAuthorized = await isAuthorizedAsVenueManager(event.userID)
         
-        if(!hasAdministratorAuthentication && !hasVenueManagerAuthorization) {throw ("User is not authorized to perform this action")}
-        
-        let venueID = hasAdministratorAuthentication ? event.venueID : event.userID;
-        
-        let venueExists = await doesVenueExist(venueID)
-        if (!venueExists) {throw ("Venue not found")}
-          
-        let showsReport = await getShowsReport(venueID)
-
-        response = {
-            statusCode: 200,
-            showsReport
+        if(isAuthorized) {
+            let showId = await getShownameFromDatabase(event.showName)
+            let block = await getBlocksFromDatabase(showId)
+            response = {
+                statusCode: 200,
+                block
+            }
+        }
+        else{
+            response = {
+                statusCode: 400,
+                error: "User is not authorized as administrator"
+            }
         }
         
     } catch (err) {

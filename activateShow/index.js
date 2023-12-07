@@ -20,9 +20,9 @@ exports.handler = async (event) => {
         });
     }
 
-    let activateShow = (showName) => {
+    let activateShow = (showID) => {
         return new Promise((resolve, reject) => {
-            pool.query("UPDATE seats4u.Shows SET isShowActive=1 WHERE showName=?", [showName], (error, rows) => {
+            pool.query("UPDATE seats4u.Shows SET isShowActive=1 WHERE showID=?", [showID], (error, rows) => {
                 if (error) { return reject(error); }
                 return resolve()
             });
@@ -32,17 +32,14 @@ exports.handler = async (event) => {
 
     let response = undefined
     try {
-        let isAuthorized = await isAuthorizedAsVenueManager(event.userID)
-        if(isAuthorized){
-            await activateShow(event.showName);
+        if(!await isAuthorizedAsVenueManager(event.userID)) {throw ("User is not authorized as a venue manager")}
 
-            response = {
-                statusCode: 200
-            }
+        await activateShow(event.showID);
+
+        response = {
+            statusCode: 200,
         }
-        else{
-            throw ("User is not authorized as a venue manager")
-        }
+
     } catch (err) {
         response = {
             statusCode: 400,

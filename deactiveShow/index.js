@@ -1,6 +1,5 @@
 const mysql = require('/opt/nodejs/node_modules/mysql');
-const db_access = require('/opt/nodejs/db_access')
-const { v4: uuidv4 } = require('/opt/nodejs/node_modules/uuid');
+const db_access = require('/opt/nodejs/db_access');
 
 exports.handler = async (event) => {
     // get credentials from the db_access layer (loaded separately via AWS console)
@@ -21,39 +20,25 @@ exports.handler = async (event) => {
         });
     }
 
-    let getShowsFromDatabase = (venueID) => {
+    let activateShow = (showID) => {
         return new Promise((resolve, reject) => {
-            pool.query("SELECT showName, isShowActive, showID, showDatetime FROM seats4u.Shows WHERE venueID=?", [venueID], (error, rows) => {
+            pool.query("UPDATE seats4u.Shows SET isShowActive=0 WHERE showID=?", [showID], (error, rows) => {
                 if (error) { return reject(error); }
-                if(rows.length > 0){
-                    return resolve(rows)
-                }
-                else{
-                    return resolve([])
-                }
+                return resolve()
             });
         });
     }
-    
+
+
     let response = undefined
     try {
-        let isAuthorized = await isAuthorizedAsVenueManager(event.userID)
+        if(!await isAuthorizedAsVenueManager(event.userID)) {throw ("User is not authorized as a venue manager")}
         
-        if(isAuthorized) {
-            let shows = await getShowsFromDatabase(event.userID)
+        await activateShow(event.showID);
 
-            response = {
-                statusCode: 200,
-                shows
-            }
+        response = {
+            statusCode: 200,
         }
-        else{
-            response = {
-                statusCode: 400,
-                error: "Venue ID not recognized"
-            }
-        }
-        
     } catch (err) {
         response = {
             statusCode: 400,
