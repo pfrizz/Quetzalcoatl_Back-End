@@ -59,19 +59,8 @@ exports.handler = async (event) => {
             });
         });
     }
-    
-    // let addSeatToDatabase = (blockID, seatRow, seatColumn) => {
-    //     return new Promise((resolve, reject) => {
-            
-            
-    //         pool.query("INSERT INTO seats4u.Seats VALUES (?, ? , ?, ?, ?)", [seatID, blockID, seatRow, seatColumn, "AVAILABLE"], (error,result) => {
-    //             if (error) {return reject(error); }
-    //             return resolve(seatID);
-    //         });
-    //     });
-    // }
-    
-    //now all seats are added in one batch statement, rather than making a bunch of individual connections
+
+    // now all seats are added in one batch statement, rather than making a bunch of individual connections
     let addSeatsToDatabase = (seats) => {
         return new Promise((resolve, reject) => {
             pool.query("INSERT INTO seats4u.Seats VALUES ?", [seats], (error,result) => {
@@ -80,19 +69,86 @@ exports.handler = async (event) => {
             });
         });
     }
+    
+    let getSectionRowCount = (venueID, sectionType) => {
+        return new Promise((resolve, reject) => {
+            pool.query("SELECT numberOfRows FROM Venues INNER JOIN Sections ON Venues.venueID = Sections.venueID WHERE Sections.venueID=? AND sectionType=?", 
+             [venueID, sectionType], (error,result) => {
+                if (error) {return reject(error); }
+                let numberOfRows = result[0].numberOfRows
+                return resolve(numberOfRows);
+            });
+        });
+    }
+    
+    let charToIndex = (charCode) => {
+        console.log(charCode)
+        return charCode-65
+    }
 
     let response = undefined
     try {
-        let isAuthorized = await isAuthorizedAsVenueManager(event.userID)
+        //--------------------- error checking begins --------------------------
+        if(!await isAuthorizedAsVenueManager(event.userID)) { throw ("User is not authorized as venue manager") }
         
-        if(!isAuthorized) { throw ("User is not authorized as venue manager") }
-        
-        //check that blocks are valid
+        // check that block bounds are valid
+        let sideLeftRowsFilled =Array(await getSectionRowCount(event.userID, "SIDELEFT")).fill(false)
+        let centerRowsFilled =Array(await getSectionRowCount(event.userID, "CENTER")).fill(false)
+        let sideRightRowsFilled =Array(await getSectionRowCount(event.userID, "SIDERIGHT")).fill(false)
         for (let i = 0; i < event.blocks.length; i++) {
-            if(event.blocks[i].endingRow.charCodeAt(0) < event.blocks[i].startingRow.charCodeAt(0)){
-                throw ("Ending row is before starting row")
+            let sectionRowCount = await getSectionRowCount(event.userID, event.blocks[i].sectionType)
+            let startingRow = charToIndex(event.blocks[i].startingRow.charCodeAt(0))
+            let endingRow = charToIndex(event.blocks[i].endingRow.charCodeAt(0))
+            
+            // check that ending row is not before starting row
+            if(endingRow < startingRow){
+                throw ("Block ending row is before starting row")
+            }
+            
+            // check that starting row is within bounds of section
+            if(startingRow > sectionRowCount) {
+                throw ("Block start is not within bounds of venue section")
+            }
+            
+            // check that ending row is within bounds of section
+            if(endingRow > sectionRowCount) {
+                throw ("Block end is not within bounds of venue section")
+            }
+            
+            // mark off the rows this block covered and check for overlap
+            if(event.blocks[i].sectionType === "SIDELEFT"){
+                for(let j = startingRow; j < endingRow + 1; j++) {
+                    if(sideLeftRowsFilled[j] == true){
+                        throw ("Blocks overlap on at least one row in side left section")
+                    }
+                    sideLeftRowsFilled[j] = true;
+                }
+            }
+            else if(event.blocks[i].sectionType === "CENTER"){
+                for(let j = startingRow; j < endingRow + 1; j++) {
+                    if(centerRowsFilled[j] == true){
+                        throw ("Blocks overlap on at least one row in center section")
+                    }
+                    centerRowsFilled[j] = true;
+                }
+            }
+            else if(event.blocks[i].sectionType === "SIDERIGHT"){
+                for(let j = startingRow; j < endingRow + 1; j++) {
+                    if(sideRightRowsFilled[j] == true){
+                        throw ("Blocks overlap on at least one row in side right section")
+                    }
+                    sideRightRowsFilled[j] = true;
+                }
             }
         }
+        
+        // check that all rows in all sections are covered
+        if(sideLeftRowsFilled.includes(false) || centerRowsFilled.includes(false) || sideRightRowsFilled.includes(false)) {
+            throw("Blocks do not fill all seats in the venue")
+        }
+        //---------------------- error checking ends ---------------------------
+        
+        
         
         // generate the showID and add it to the database
         let showID = await addShowToDatabase(event.userID, event.showName, false, event.showDatetime)
@@ -106,15 +162,11 @@ exports.handler = async (event) => {
                                                     event.blocks[i].startingRow, 
                                                     event.blocks[i].endingRow);
                                                     
-            // add all of the block's seats to the database
             let numberOfRows = event.blocks[i].endingRow.charCodeAt(0) - event.blocks[i].startingRow.charCodeAt(0) + 1;
-           // console.log(i + "rows: " + numberOfRows)
             let numberOfColumns = await getNumberOfBlockColumns(blockID);
-           // console.log(i + "cols: " + numberOfColumns)
-            
+
             //array of seats to be added in batch query
             let seats = []
-            
             for (let j = 0; j < numberOfRows; j++){
                 for(let k = 0; k < numberOfColumns; k++){
                     let seatID = uuidv4();
@@ -123,13 +175,13 @@ exports.handler = async (event) => {
                     let seatColumn = k + 1;
                     
                     seats.push([seatID, blockID, seatRow, seatColumn, "AVAILABLE"])
-                   // console.log("added seat" + (j*k + k) + ": " + seatID)
                 }
             }
-            //console.log("adding " + seats.length)
+
             await addSeatsToDatabase(seats);
         }
-
+        
+        
         response = {
             statusCode: 200,
             showID
