@@ -60,13 +60,23 @@ exports.handler = async (event) => {
         });
     }
     
-    let addSeatToDatabase = (blockID, seatRow, seatColumn) => {
-        return new Promise((resolve, reject) => {
-            let seatID = uuidv4();
+    // let addSeatToDatabase = (blockID, seatRow, seatColumn) => {
+    //     return new Promise((resolve, reject) => {
             
-            pool.query("INSERT INTO seats4u.Seats VALUES (?, ? , ?, ?, ?)", [seatID, blockID, seatRow, seatColumn, "AVAILABLE"], (error,result) => {
+            
+    //         pool.query("INSERT INTO seats4u.Seats VALUES (?, ? , ?, ?, ?)", [seatID, blockID, seatRow, seatColumn, "AVAILABLE"], (error,result) => {
+    //             if (error) {return reject(error); }
+    //             return resolve(seatID);
+    //         });
+    //     });
+    // }
+    
+    //now all seats are added in one batch statement, rather than making a bunch of individual connections
+    let addSeatsToDatabase = (seats) => {
+        return new Promise((resolve, reject) => {
+            pool.query("INSERT INTO seats4u.Seats VALUES ?", [seats], (error,result) => {
                 if (error) {return reject(error); }
-                return resolve(seatID);
+                return resolve();
             });
         });
     }
@@ -102,15 +112,22 @@ exports.handler = async (event) => {
             let numberOfColumns = await getNumberOfBlockColumns(blockID);
            // console.log(i + "cols: " + numberOfColumns)
             
+            //array of seats to be added in batch query
+            let seats = []
+            
             for (let j = 0; j < numberOfRows; j++){
                 for(let k = 0; k < numberOfColumns; k++){
+                    let seatID = uuidv4();
                     let seatRow = String.fromCharCode(event.blocks[i].startingRow.charCodeAt(0) + j);
                     // seat columns are 1-indexed
                     let seatColumn = k + 1;
-                    let seatID = await addSeatToDatabase(blockID, seatRow, seatColumn);
+                    
+                    seats.push([seatID, blockID, seatRow, seatColumn, "AVAILABLE"])
                    // console.log("added seat" + (j*k + k) + ": " + seatID)
                 }
             }
+            //console.log("adding " + seats.length)
+            await addSeatsToDatabase(seats);
         }
 
         response = {
