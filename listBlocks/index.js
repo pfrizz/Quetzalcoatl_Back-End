@@ -1,9 +1,7 @@
 const mysql = require('/opt/nodejs/node_modules/mysql');
 const db_access = require('/opt/nodejs/db_access')
-const { v4: uuidv4 } = require('/opt/nodejs/node_modules/uuid');
 
 exports.handler = async (event) => {
-    console.log("SDDSD")
     // get credentials from the db_access layer (loaded separately via AWS console)
     var pool = mysql.createPool({
         host: db_access.config.host,
@@ -22,52 +20,26 @@ exports.handler = async (event) => {
         });
     }
     
-    let getShownameFromDatabase = (showName) => {
-        return new Promise((resolve, reject) => {
-            pool.query("SELECT showID FROM seats4u.Shows where showName=?",[showName], (error, rows) => {
-                if (error) { return reject(error); }
-                console.log(rows[0])
-                let showID = rows[0];
 
-                return resolve(rows[0].showID)
-                
-            });
-        });
-    }
-
-console.log("SDS")
-    let getBlocksFromDatabase = (showID) => {
+    let getBlocksList = (showID) => {
         return new Promise((resolve, reject) => {
-            pool.query("SELECT price, startingRow, endingRow FROM seats4u.Blocks where showID=?",[showID], (error, rows) => {
+            pool.query("CALL `seats4u`.`getBlocksList`(?)",[showID], (error, rows) => {
                 if (error) { return reject(error); }
-                if(rows.length > 0){
-                    return resolve(rows)
-                }
-                else{
-                    return resolve([])
-                }
+                return resolve(rows[0])
             });
         });
     }
     
     let response = undefined
     try {
-        let isAuthorized = await isAuthorizedAsVenueManager(event.userID)
+        if(!await isAuthorizedAsVenueManager(event.userID)) {throw ("User is not authorized as venue manager")}
         
-        if(isAuthorized) {
-            let showId = await getShownameFromDatabase(event.showName)
-            let block = await getBlocksFromDatabase(showId)
-            response = {
-                statusCode: 200,
-                block
-            }
+        let blocks = await getBlocksList(event.showID)
+        response = {
+            statusCode: 200,
+            blocks
         }
-        else{
-            response = {
-                statusCode: 400,
-                error: "User is not authorized as administrator"
-            }
-        }
+        
         
     } catch (err) {
         response = {

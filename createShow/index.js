@@ -92,6 +92,7 @@ exports.handler = async (event) => {
         if(!await isAuthorizedAsVenueManager(event.userID)) { throw ("User is not authorized as venue manager") }
         
         // check that block bounds are valid
+
         let sideLeftRowsFilled =Array(await getSectionRowCount(event.userID, "SIDELEFT")).fill(false)
         let centerRowsFilled =Array(await getSectionRowCount(event.userID, "CENTER")).fill(false)
         let sideRightRowsFilled =Array(await getSectionRowCount(event.userID, "SIDERIGHT")).fill(false)

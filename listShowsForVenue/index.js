@@ -23,7 +23,7 @@ exports.handler = async (event) => {
 
     let getShowsFromDatabase = (venueID) => {
         return new Promise((resolve, reject) => {
-            pool.query("SELECT showName, isShowActive, showID, showDatetime FROM seats4u.Shows WHERE venueID=?", [venueID], (error, rows) => {
+            pool.query("SELECT showName, isShowActive, showID, showDatetime FROM seats4u.Shows WHERE venueID=? ORDER BY showDatetime", [venueID], (error, rows) => {
                 if (error) { return reject(error); }
                 if(rows.length > 0){
                     return resolve(rows)
