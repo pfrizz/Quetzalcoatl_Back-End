@@ -19,6 +19,16 @@ exports.handler = async (event) => {
             });
         });
     }
+    
+    let isShowInPast = (showID) => {
+        return new Promise((resolve, reject) => {
+            pool.query("SELECT * FROM seats4u.Shows WHERE showID=? AND showDatetime < CONVERT_TZ(NOW(), 'UTC', 'US/Eastern')", [showID], (error, rows) => {
+                if (error) { return reject(error); }
+                let isInPast = rows.length > 0;
+                return resolve(isInPast)
+            });
+        });
+    }
 
     let getAvailableSeatsBySeatRow = (showID) => {
         return new Promise((resolve, reject) => {
@@ -80,6 +90,7 @@ exports.handler = async (event) => {
     try {
         if(event.showID == null) {throw("Key 'showID' is required")}
         if(!await doesShowExist(event.showID)) {throw("Show with id '" + event.showID + "' does not exist")}
+        if(await isShowInPast(event.showID)) {throw("Show has already started and tickets cannot be bought for it")}
         
         let availableSeats = null;
         if(event.orderBy === "seatRow"){
