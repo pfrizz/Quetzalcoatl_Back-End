@@ -30,6 +30,16 @@ exports.handler = async (event) => {
       });
     }
     
+      let isShowInPast = (showID) => {
+        return new Promise((resolve, reject) => {
+            pool.query("SELECT * FROM seats4u.Shows WHERE showID=? AND showDatetime < CONVERT_TZ(NOW(), 'UTC', 'US/Eastern')", [showID], (error, rows) => {
+                if (error) { return reject(error); }
+                let isInPast = rows.length > 0;
+                return resolve(isInPast)
+            });
+        });
+    }
+    
     let buySeat = (seatID) => {
       return new Promise((resolve, reject) => {
           pool.query("UPDATE seats4u.Seats SET seatState='SOLD' WHERE seatID=?", [seatID], (error, rows) => {
@@ -41,6 +51,7 @@ exports.handler = async (event) => {
     
     let response = undefined
     try {
+      if(await isShowInPast(event.showID)) {throw("Show is in the past and seats cannot be bought")}
         if(event.selectedSeats == null) {throw("Key 'selectedSeats' is required")}
         
         // error check all seats before buying
